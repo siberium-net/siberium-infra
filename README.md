@@ -46,7 +46,29 @@ Siberium is an EVM-compatible Layer 1 blockchain designed for high-performance d
 - 4GB+ RAM, 100GB+ storage (SSD recommended)
 - Linux/macOS/Windows with WSL2
 
-### Deploy Mainnet Node
+### Option 1: Run Pre-built Docker Image
+
+**Mainnet:**
+```bash
+docker run -d \
+  --name siberium-mainnet \
+  -p 8545:8545 -p 8546:8546 -p 30303:30303 \
+  -v ./siberium-data:/root/.ethereum \
+  ghcr.io/siberium-net/siberium-mainnet:latest
+```
+
+**Testnet:**
+```bash
+docker run -d \
+  --name siberium-testnet \
+  -p 8545:8545 -p 8546:8546 -p 30303:30303 \
+  -v ./siberium-data:/root/.ethereum \
+  ghcr.io/siberium-net/siberium-testnet:latest
+```
+
+[IMPORTANT] Bootnodes are not yet configured. See [Bootnode Setup](docs/bootnode-setup.md) for details.
+
+### Option 2: Deploy Full Infrastructure Stack
 
 ```bash
 # Clone the repository
@@ -55,7 +77,7 @@ cd siberium-infra
 
 # Configure environment
 cp env.example networks/mainnet/.env
-nano networks/mainnet/.env  # Edit configuration
+nano networks/mainnet/.env  # Edit configuration and add BOOTNODES
 
 # Start the node
 ./ops.sh mainnet up -d
@@ -64,18 +86,23 @@ nano networks/mainnet/.env  # Edit configuration
 ./ops.sh mainnet logs -f node
 ```
 
-### Deploy Testnet Node
+Your node RPC will be available at `http://localhost:8545` (or configured port).
+
+### Build Docker Images Locally
+
+To build images with custom bootnode configuration:
 
 ```bash
-# Configure testnet
-cp env.example networks/testnet/.env
-nano networks/testnet/.env  # Edit configuration
+# Edit Dockerfiles to add bootnodes
+nano services/node/Dockerfile.mainnet  # Add BOOTNODES_MAINNET
+nano services/node/Dockerfile.testnet  # Add BOOTNODES_TESTNET
 
-# Start testnet
-./ops.sh testnet up -d
+# Build images
+./build-images.sh
+
+# Or build and push to registry
+VERSION=v1.0.0 PUSH=true ./build-images.sh
 ```
-
-Your node RPC will be available at `http://localhost:8545` (or configured port).
 
 ---
 
@@ -102,6 +129,10 @@ This infrastructure stack includes:
 
 ## Documentation
 
+### Quick Reference
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Complete configuration summary with bootnodes
+- **[BOOTNODE_FIX.md](BOOTNODE_FIX.md)** - Recent bootnode configuration fixes
+
 ### Network Information
 - [Network Details](docs/network-details.md) - Chain IDs, RPC endpoints, explorers
 - [MetaMask Integration](docs/metamask-guide.md) - Connect wallets to Siberium
@@ -114,6 +145,7 @@ This infrastructure stack includes:
 
 ### Resources
 - [Resources](docs/resources.md) - Faucets, bridges, community links
+- [Bootnode Setup](docs/bootnode-setup.md) - Configure network bootnodes
 
 ---
 

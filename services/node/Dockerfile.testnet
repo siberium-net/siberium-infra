@@ -1,0 +1,27 @@
+FROM ethereum/client-go:v1.13.14
+
+# Testnet-specific defaults
+ENV NETWORK_NAME=testnet
+ENV NETWORK_ID=111000
+ENV BOOTNODES_TESTNET="enode://e0c830715dd66fafd9ed6bd6cb0cae2e56b825f62e3a23fd4b6c0f5540b2d8574d8fac81823a65de1c9e5bd57d1156bc492c32c7061b92c7d4051b789bc82fb6@37.230.181.164:30003"
+
+RUN apk add --no-cache bash curl
+
+COPY services/node/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY networks/testnet/genesis.json /root/genesis.json
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Verify genesis is for testnet (chain ID 111000)
+RUN grep -q '"chainId": 111000' /root/genesis.json || \
+    (echo "ERROR: Genesis file is not for testnet (chain ID 111000)" && exit 1)
+
+# Expose ports
+EXPOSE 8545 8546 30303 30303/udp
+
+LABEL org.opencontainers.image.title="Siberium Testnet Node"
+LABEL org.opencontainers.image.description="Siberium Testnet (Chain ID: 111000) Geth node"
+LABEL org.opencontainers.image.vendor="Siberium Network"
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+

@@ -1,0 +1,27 @@
+FROM ethereum/client-go:v1.13.14
+
+# Mainnet-specific defaults
+ENV NETWORK_NAME=mainnet
+ENV NETWORK_ID=111111
+ENV BOOTNODES_MAINNET="enode://c2517e5cf32c2be981b34d66c81a0fbf7674040f6b2789a07a68e338fd6e186c9eeeae8935d9bcb9d425e49f4089238fd446db542e223e23ce4d8a1a14f02e75@37.230.181.169:30001"
+
+RUN apk add --no-cache bash curl
+
+COPY services/node/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY networks/mainnet/genesis.json /root/genesis.json
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Verify genesis is for mainnet (chain ID 111111)
+RUN grep -q '"chainId": 111111' /root/genesis.json || \
+    (echo "ERROR: Genesis file is not for mainnet (chain ID 111111)" && exit 1)
+
+# Expose ports
+EXPOSE 8545 8546 30303 30303/udp
+
+LABEL org.opencontainers.image.title="Siberium Mainnet Node"
+LABEL org.opencontainers.image.description="Siberium Mainnet (Chain ID: 111111) Geth node"
+LABEL org.opencontainers.image.vendor="Siberium Network"
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
