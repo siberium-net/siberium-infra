@@ -1,0 +1,40 @@
+name: Build and publish node images
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        network: [mainnet, testnet]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/node/Dockerfile
+          push: true
+          build-args: |
+            NETWORK_NAME=${{ matrix.network }}
+          tags: |
+            ghcr.io/siberium-net/siberium-${{ matrix.network }}:latest
+            ghcr.io/siberium-net/siberium-${{ matrix.network }}:${{ github.sha }}
+

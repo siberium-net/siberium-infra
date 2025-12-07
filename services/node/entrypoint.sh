@@ -6,7 +6,7 @@ DATADIR="${DATADIR:-/root/.ethereum}"
 CHAINDATA="${DATADIR}/geth/chaindata"
 BOOTNODES="${BOOTNODES:-}"
 STATIC_PEERS="${STATIC_PEERS:-}"
-GENESIS_PATH="/config/genesis.json"
+GENESIS_PATH="${GENESIS_PATH:-}"
 OVERRIDE_TTD="${OVERRIDE_TTD:-true}"
 SUPPORTS_TTD_OVERRIDE=0
 
@@ -14,8 +14,16 @@ if geth --help 2>&1 | grep -q -- "--override.terminaltotaldifficulty"; then
   SUPPORTS_TTD_OVERRIDE=1
 fi
 
-if [ ! -f "${GENESIS_PATH}" ]; then
-  echo "[ERROR] Genesis file not found at ${GENESIS_PATH}" >&2
+if [ -z "${GENESIS_PATH}" ]; then
+  if [ -f "/config/genesis.json" ]; then
+    GENESIS_PATH="/config/genesis.json"
+  elif [ -f "/root/genesis.json" ]; then
+    GENESIS_PATH="/root/genesis.json"
+  fi
+fi
+
+if [ -z "${GENESIS_PATH}" ] || [ ! -f "${GENESIS_PATH}" ]; then
+  echo "[ERROR] Genesis file not found. Checked /config/genesis.json and /root/genesis.json" >&2
   exit 1
 fi
 
