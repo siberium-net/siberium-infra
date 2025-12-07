@@ -2,7 +2,11 @@ version: "3.9"
 
 services:
   node:
-    build: ./services/node
+    build:
+      context: .
+      dockerfile: services/node/Dockerfile
+      args:
+        NETWORK_NAME: ${NETWORK_NAME}
     environment:
       - NETWORK_ID=${NETWORK_ID}
       - BOOTNODES=${BOOTNODES}
