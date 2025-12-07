@@ -2,35 +2,35 @@ version: "3.9"
 
 services:
   node:
-    build: ./node
-    container_name: siberium-node
+    build: ./services/node
     environment:
       - NETWORK_ID=${NETWORK_ID}
       - BOOTNODES=${BOOTNODES}
       - STATIC_PEERS=${STATIC_PEERS}
     volumes:
-      - ./data/node:/root/.ethereum
-      - ./mainnet/genesis.json:/config/genesis_111111.json:ro
-      - ./testnet/genesis.json:/config/genesis_111000.json:ro
+      - ./data/${NETWORK_NAME}/geth:/root/.ethereum
+      - ./networks/${NETWORK_NAME}/genesis.json:/config/genesis.json:ro
     ports:
-      - "8545:8545"
-      - "8546:8546"
+      - "${RPC_PORT}:8545"
+      - "${WS_PORT}:8546"
     restart: unless-stopped
+    networks:
+      - siberium
 
   db:
     image: postgres:15
-    container_name: siberium-db
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - ./data/pg:/var/lib/postgresql/data
+      - ./data/${NETWORK_NAME}/pg:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - siberium
 
   blockscout:
     image: blockscout/blockscout:latest
-    container_name: siberium-blockscout
     depends_on:
       - node
       - db
@@ -46,24 +46,26 @@ services:
       - ETHEREUM_JSONRPC_TRACE_URL=http://node:8545
       - CHAIN_ID=${NETWORK_ID}
     ports:
-      - "4000:4000"
+      - "${EXPLORER_PORT}:4000"
     restart: unless-stopped
+    networks:
+      - siberium
 
   gateway:
     image: nginx:alpine
-    container_name: siberium-gateway
     depends_on:
       - node
       - blockscout
     volumes:
-      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./services/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "80:80"
+      - "${GATEWAY_PORT}:80"
     restart: unless-stopped
+    networks:
+      - siberium
 
   faucet:
-    build: ./faucet
-    container_name: siberium-faucet
+    build: ./services/faucet
     environment:
       - FAUCET_PRIVATE_KEY=${FAUCET_PRIVATE_KEY}
       - RPC_URL=${FAUCET_RPC_URL}
@@ -71,15 +73,15 @@ services:
       - FAUCET_AMOUNT=${FAUCET_AMOUNT}
       - FAUCET_DB_PATH=/data/db.sqlite
     volumes:
-      - ./data/faucet:/data
+      - ./data/${NETWORK_NAME}/faucet:/data
     depends_on:
       - node
     ports:
-      - "8000:8000"
+      - "${FAUCET_PORT}:8000"
     restart: unless-stopped
+    networks:
+      - siberium
 
-volumes:
-  node_data:
-  pg_data:
-  faucet_data:
-
+networks:
+  siberium:
+    driver: bridge
