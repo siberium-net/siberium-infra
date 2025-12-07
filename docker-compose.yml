@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  node:
+    build: ./node
+    container_name: siberium-node
+    environment:
+      - NETWORK_ID=${NETWORK_ID}
+      - BOOTNODES=${BOOTNODES}
+      - STATIC_PEERS=${STATIC_PEERS}
+    volumes:
+      - ./data/node:/root/.ethereum
+      - ./mainnet/genesis.json:/config/genesis_111111.json:ro
+      - ./testnet/genesis.json:/config/genesis_111000.json:ro
+    ports:
+      - "8545:8545"
+      - "8546:8546"
+    restart: unless-stopped
+
+  db:
+    image: postgres:15
+    container_name: siberium-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./data/pg:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  blockscout:
+    image: blockscout/blockscout:latest
+    container_name: siberium-blockscout
+    depends_on:
+      - node
+      - db
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - ECTO_USE_SSL=false
+      - MIX_ENV=prod
+      - PORT=4000
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - ETHEREUM_JSONRPC_VARIANT=geth
+      - ETHEREUM_JSONRPC_HTTP_URL=http://node:8545
+      - ETHEREUM_JSONRPC_WS_URL=ws://node:8546
+      - ETHEREUM_JSONRPC_TRACE_URL=http://node:8545
+      - CHAIN_ID=${NETWORK_ID}
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+
+  gateway:
+    image: nginx:alpine
+    container_name: siberium-gateway
+    depends_on:
+      - node
+      - blockscout
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+  faucet:
+    build: ./faucet
+    container_name: siberium-faucet
+    environment:
+      - FAUCET_PRIVATE_KEY=${FAUCET_PRIVATE_KEY}
+      - RPC_URL=${FAUCET_RPC_URL}
+      - CHAIN_ID=${NETWORK_ID}
+      - FAUCET_AMOUNT=${FAUCET_AMOUNT}
+      - FAUCET_DB_PATH=/data/db.sqlite
+    volumes:
+      - ./data/faucet:/data
+    depends_on:
+      - node
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  node_data:
+  pg_data:
+  faucet_data:
+
