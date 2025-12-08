@@ -717,3 +717,4 @@ sudo cpupower frequency-set -g performance
 
 [Назад к README](../README_RU.md)
 
+

@@ -300,3 +300,4 @@ print(f"Chain ID: {w3_mainnet.eth.chain_id}")
 
 [Назад к README](../README_RU.md)
 
+
