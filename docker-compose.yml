@@ -34,21 +34,13 @@ services:
       - siberium
 
   blockscout:
-    image: blockscout/blockscout:latest
+    build: ./services/explorer
     depends_on:
       - node
       - db
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - ECTO_USE_SSL=false
-      - MIX_ENV=prod
-      - PORT=4000
-      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
-      - ETHEREUM_JSONRPC_VARIANT=geth
       - ETHEREUM_JSONRPC_HTTP_URL=http://node:8545
-      - ETHEREUM_JSONRPC_WS_URL=ws://node:8546
-      - ETHEREUM_JSONRPC_TRACE_URL=http://node:8545
-      - CHAIN_ID=${NETWORK_ID}
     ports:
       - "${EXPLORER_PORT}:4000"
     restart: unless-stopped
@@ -56,14 +48,31 @@ services:
       - siberium
 
   gateway:
-    image: nginx:alpine
+    build: ./services/gateway
     depends_on:
       - node
       - blockscout
+    environment:
+      - RPC_HOSTS=${RPC_HOSTS}
+      - EXPLORER_HOSTS=${EXPLORER_HOSTS}
+      - MAIN_DOMAIN=${MAIN_DOMAIN}
     volumes:
-      - ./services/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
     ports:
-      - "${GATEWAY_PORT}:80"
+      - "80:80"
+      - "443:443"
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    restart: unless-stopped
+    networks:
+      - siberium
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    command: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done'"
     restart: unless-stopped
     networks:
       - siberium
